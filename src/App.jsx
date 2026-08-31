@@ -5,7 +5,7 @@ import './App.css'
 export default function App() {
   const [posts, setPosts] = useState([])
   const [logoUrl, setLogoUrl] = useState('')
-  const [aba, setAba] = useState('inicio') // inicio, rifa, galeria, admin
+  const [aba, setAba] = useState('inicio') // inicio, rifa, galeria, transparencia, admin
   
   // Insira o número do WhatsApp com DDD (Ex: 5541999999999)
   const NUMERO_WHATSAPP = '5531995309939'
@@ -182,6 +182,7 @@ export default function App() {
           <button onClick={() => setAba('inicio')} className={aba === 'inicio' ? 'ativo' : ''}>Início</button>
           <button onClick={() => setAba('rifa')} className={aba === 'rifa' ? 'ativo' : ''}>Rifa / Sorteio</button>
           <button onClick={() => setAba('galeria')} className={aba === 'galeria' ? 'ativo' : ''}>Galeria</button>
+          <button onClick={() => setAba('transparencia')} className={aba === 'transparencia' ? 'ativo' : ''}>📄 Portal Transparência</button>
           <button onClick={abrirAdmin} className="btn-admin">
             {idEditando ? '✏️ Editando Post' : '⚙️ Painel Admin'}
           </button>
@@ -197,16 +198,17 @@ export default function App() {
               <label>O que você quer publicar ou alterar?</label>
               <select value={categoria} onChange={e => setCategoria(e.target.value)}>
                 <option value="galeria">Galeria de Fotos</option>
+                <option value="transparencia">📄 Comprovante / Transparência</option>
                 <option value="rifa">Resultado da Rifa / Sorteio</option>
                 <option value="logo">🖼️ Logo / Banner do Topo</option>
               </select>
 
               {categoria !== 'logo' && (
                 <>
-                  <label>Título:</label>
+                  <label>Título / Descrição do Comprovante:</label>
                   <input type="text" value={titulo} onChange={e => setTitulo(e.target.value)} required />
 
-                  <label>Descrição:</label>
+                  <label>Observações / Detalhes:</label>
                   <textarea value={conteudo} onChange={e => setConteudo(e.target.value)} rows="3" />
                 </>
               )}
@@ -221,7 +223,7 @@ export default function App() {
                 </>
               )}
 
-              <label>Foto:</label>
+              <label>Foto / Comprovante:</label>
               <input type="file" accept="image/*" onChange={e => setImagem(e.target.files[0])} />
 
               <div className="botoes-form">
@@ -240,6 +242,7 @@ export default function App() {
             {aba === 'inicio' && 'Todas as Publicações'}
             {aba === 'rifa' && 'Resultado da Rifa'}
             {aba === 'galeria' && 'Galeria de Fotos'}
+            {aba === 'transparencia' && '📄 Portal Transparência (Comprovantes)'}
             {aba === 'admin' && 'Gerenciar Publicações Existentes'}
           </h2>
 
