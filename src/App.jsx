@@ -120,6 +120,7 @@ export default function App() {
     setNumeroSorteado(post.numero_sorteado || '')
     setGanhador(post.ganhador || '')
     setAba('admin')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   async function handleDelete(id) {
@@ -139,7 +140,7 @@ export default function App() {
     setGanhador('')
   }
 
-  const postsFiltrados = posts.filter(p => aba === 'inicio' ? true : p.categoria === aba)
+  const postsFiltrados = posts.filter(p => aba === 'inicio' || aba === 'admin' ? true : p.categoria === aba)
 
   return (
     <div className="container">
@@ -189,7 +190,7 @@ export default function App() {
 
       {/* Conteúdo */}
       <main className="conteudo">
-        {aba === 'admin' ? (
+        {aba === 'admin' && (
           <section className="painel-admin">
             <h2>{idEditando ? 'Editar Publicação' : 'Painel Admin'}</h2>
             <form onSubmit={handleSubmit} className="form-admin">
@@ -230,61 +231,62 @@ export default function App() {
                 {idEditando && <button type="button" onClick={limparFormulario} className="btn-cancelar">Cancelar</button>}
               </div>
             </form>
-          </section>
-        ) : (
-          <section className="feed">
-            <h2>
-              {aba === 'inicio' && 'Todas as Publicações'}
-              {aba === 'rifa' && 'Resultado da Rifa'}
-              {aba === 'galeria' && 'Galeria de Fotos'}
-            </h2>
-
-            {aba === 'rifa' && (
-              <div className="destaque-data-sorteio">
-                <p className="titulo-sorteio">🗓️ DATA DO SORTEIO DA RIFA:</p>
-                <h3 className="data-grande">26/09/2025</h3>
-              </div>
-            )}
-
-            {postsFiltrados.length === 0 ? (
-              <p>Nenhuma publicação nesta seção.</p>
-            ) : (
-              <div className="grid-posts">
-                {postsFiltrados.map(post => (
-                  <div key={post.id} className="card-post">
-                    {post.imagem_url && <img src={post.imagem_url} alt={post.titulo} />}
-                    <div className="card-corpo">
-                      <span className="tag">{post.categoria}</span>
-                      <h3>{post.titulo}</h3>
-                      <p>{post.conteudo}</p>
-                      
-                      {post.categoria === 'rifa' && (
-                        <div className="info-rifa">
-                          <p><strong>🎟️ Número Sorteado:</strong> {post.numero_sorteado}</p>
-                          <p><strong>🏆 Ganhador:</strong> {post.ganhador}</p>
-                        </div>
-                      )}
-
-                      <div className="interacao-card">
-                        <button onClick={() => handleLike(post)} className="btn-like">
-                          ❤️ {post.likes || 0}
-                        </button>
-                      </div>
-
-                      {/* Exibe Editar/Excluir apenas no modo Admin */}
-                      {aba === 'admin' && (
-                        <div className="acoes-card">
-                          <button onClick={() => prepararEdicao(post)}>✏️ Editar</button>
-                          <button onClick={() => handleDelete(post.id)} className="btn-deletar">🗑️ Excluir</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <hr style={{ margin: '30px 0' }} />
           </section>
         )}
+
+        <section className="feed">
+          <h2>
+            {aba === 'inicio' && 'Todas as Publicações'}
+            {aba === 'rifa' && 'Resultado da Rifa'}
+            {aba === 'galeria' && 'Galeria de Fotos'}
+            {aba === 'admin' && 'Gerenciar Publicações Existentes'}
+          </h2>
+
+          {aba === 'rifa' && (
+            <div className="destaque-data-sorteio">
+              <p className="titulo-sorteio">🗓️ DATA DO SORTEIO DA RIFA:</p>
+              <h3 className="data-grande">26/09/2025</h3>
+            </div>
+          )}
+
+          {postsFiltrados.length === 0 ? (
+            <p>Nenhuma publicação nesta seção.</p>
+          ) : (
+            <div className="grid-posts">
+              {postsFiltrados.map(post => (
+                <div key={post.id} className="card-post">
+                  {post.imagem_url && <img src={post.imagem_url} alt={post.titulo} />}
+                  <div className="card-corpo">
+                    <span className="tag">{post.categoria}</span>
+                    <h3>{post.titulo}</h3>
+                    <p>{post.conteudo}</p>
+                    
+                    {post.categoria === 'rifa' && (
+                      <div className="info-rifa">
+                        <p><strong>🎟️ Número Sorteado:</strong> {post.numero_sorteado}</p>
+                        <p><strong>🏆 Ganhador:</strong> {post.ganhador}</p>
+                      </div>
+                    )}
+
+                    <div className="interacao-card">
+                      <button onClick={() => handleLike(post)} className="btn-like">
+                        ❤️ {post.likes || 0}
+                      </button>
+                    </div>
+
+                    {aba === 'admin' && (
+                      <div className="acoes-card" style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
+                        <button onClick={() => prepararEdicao(post)}>✏️ Editar</button>
+                        <button onClick={() => handleDelete(post.id)} className="btn-deletar">🗑️ Excluir</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </main>
     </div>
   )
