@@ -5,7 +5,7 @@ import './App.css'
 export default function App() {
   const [posts, setPosts] = useState([])
   const [logoUrl, setLogoUrl] = useState('')
-  const [aba, setAba] = useState('inicio') // inicio, rifa, galeria, transparencia, admin
+  const [aba, setAba] = useState('inicio') // inicio, rifa, galeria, admin
   const [adminAutenticado, setAdminAutenticado] = useState(false)
   
   // WhatsApp & Autenticação
@@ -70,7 +70,6 @@ export default function App() {
     if (postRifa) {
       if (postRifa.lista_numeros) setParticipantes(postRifa.lista_numeros)
       
-      // Se o sorteio já foi realizado anteriormente, recupera os números e fixa na tela
       if (postRifa.numero_sorteado) {
         const numeros = String(postRifa.numero_sorteado).split(' / ')
         setNumeroRoleta1(numeros[0] || '?')
@@ -134,7 +133,6 @@ export default function App() {
     alert('Lista de participantes salva com sucesso!')
   }
 
-  // Executa o sorteio e GARANTE o salvamento no banco de dados
   async function executarSorteio() {
     const confirmacao = confirm('Deseja iniciar o sorteio oficial de 2 números ao vivo agora?')
     if (!confirmacao) return
@@ -191,7 +189,7 @@ export default function App() {
           await carregarDados()
           alert(`🏆 SORTEIO CONCLUÍDO E SALVO NO BANCO!\n\n${resultadoGanhadores}`)
         } else {
-          alert('⚠️ Ocorreu um erro ao salvar o resultado no Supabase. Verifique se o RLS ou as colunas da tabela "posts" estão configuradas corretamente.')
+          alert('⚠️ Ocorreu um erro ao salvar o resultado no Supabase.')
         }
       }
     }, 100)
@@ -353,12 +351,11 @@ export default function App() {
           </div>
         </div>
 
-        {/* Navegação */}
+        {/* Navegação sem a Transparência */}
         <nav className="nav">
           <button onClick={() => setAba('inicio')} className={aba === 'inicio' ? 'ativo' : ''}>Início</button>
           <button onClick={() => setAba('rifa')} className={aba === 'rifa' ? 'ativo' : ''}>🎲 Rifa / Sorteio</button>
           <button onClick={() => setAba('galeria')} className={aba === 'galeria' ? 'ativo' : ''}>Galeria</button>
-          <button onClick={() => setAba('transparencia')} className={aba === 'transparencia' ? 'ativo' : ''}>📄 Portal Transparência</button>
           <button onClick={abrirAdmin} className={aba === 'admin' ? 'btn-admin ativo' : 'btn-admin'}>
             {adminAutenticado ? (idEditando ? '✏️ Editando Post' : '⚙️ Painel Admin') : '🔒 Acesso Admin'}
           </button>
@@ -419,7 +416,6 @@ export default function App() {
               <label>O que você quer publicar?</label>
               <select value={categoria} onChange={e => setCategoria(e.target.value)}>
                 <option value="galeria">Galeria de Fotos</option>
-                <option value="transparencia">📄 Comprovante / Transparência</option>
                 <option value="logo">🖼️ Logo / Banner do Topo</option>
               </select>
 
@@ -512,7 +508,6 @@ export default function App() {
             {aba === 'inicio' && 'Todas as Publicações'}
             {aba === 'rifa' && 'Histórico do Sorteio'}
             {aba === 'galeria' && 'Galeria de Fotos'}
-            {aba === 'transparencia' && '📄 Portal Transparência (Comprovantes)'}
             {aba === 'admin' && 'Gerenciar Publicações Existentes'}
           </h2>
 
