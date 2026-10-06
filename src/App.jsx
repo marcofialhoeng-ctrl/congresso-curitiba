@@ -7,17 +7,15 @@ export default function App() {
   const [logoUrl, setLogoUrl] = useState('')
   const [aba, setAba] = useState('inicio') // inicio, rifa, galeria, transparencia, admin
   
-  // Insira o número do WhatsApp com DDD (Ex: 5541999999999)
+  // WhatsApp & Autenticação
   const NUMERO_WHATSAPP = '5531995309939'
-
-  // Senha do Painel Admin
   const SENHA_ADMIN = 'Fodasse#1' 
 
-  // Dados do Cronômetro (Congresso: 27 de Setembro de 2026)
+  // Cronômetro
   const dataEvento = new Date('2026-09-27T09:00:00').getTime()
   const [tempoRestante, setTempoRestante] = useState({ dias: 0, horas: 0, minutos: 0, segundos: 0 })
 
-  // Campos do Form Admin
+  // Campos Admin
   const [idEditando, setIdEditando] = useState(null)
   const [titulo, setTitulo] = useState('')
   const [conteudo, setConteudo] = useState('')
@@ -26,6 +24,16 @@ export default function App() {
   const [numeroSorteado, setNumeroSorteado] = useState('')
   const [ganhador, setGanhador] = useState('')
   const [carregando, setCarregando] = useState(false)
+
+  // Sistema do Sorteio Automático
+  const [participantes, setParticipantes] = useState(() => {
+    const iniciais = {}
+    for (let i = 1; i <= 230; i++) iniciais[i] = ''
+    return iniciais
+  })
+  const [numeroRoleta, setNumeroRoleta] = useState('?')
+  const [sorteando, setSorteando] = useState(false)
+  const [reproduzindoReplay, setReproduzindoReplay] = useState(false)
 
   useEffect(() => {
     carregarDados()
@@ -52,11 +60,17 @@ export default function App() {
     const logoSalva = await getLogo()
     setPosts(postsDados)
     if (logoSalva) setLogoUrl(logoSalva)
+
+    // Carrega dados da Rifa se existirem
+    const postRifa = postsDados.find(p => p.categoria === 'rifa')
+    if (postRifa) {
+      if (postRifa.lista_numeros) setParticipantes(postRifa.lista_numeros)
+      if (postRifa.numero_sorteado) setNumeroRoleta(postRifa.numero_sorteado)
+    }
   }
 
   function abrirAdmin() {
     if (aba === 'admin') return
-
     const senhaDigitada = prompt('Digite a senha para acessar o Painel Admin:')
     if (senhaDigitada === SENHA_ADMIN) {
       setAba('admin')
@@ -69,6 +83,117 @@ export default function App() {
     const novosLikes = (post.likes || 0) + 1
     setPosts(posts.map(p => p.id === post.id ? { ...p, likes: novosLikes } : p))
     await updatePost(post.id, { likes: novosLikes })
+  }
+
+  // Atualizar Lista de Participantes (Nome do número)
+  function handleNomeChange(numero, nome) {
+    setParticipantes(prev => ({ ...prev, [numero]: nome }))
+  }
+
+  // Salvar Lista de Participantes no Supabase
+  async function salvarListaParticipantes() {
+    setCarregando(true)
+    const postRifa = posts.find(p => p.categoria === 'rifa')
+    
+    if (postRifa) {
+      await updatePost(postRifa.id, { lista_numeros: participantes })
+    } else {
+      await createPost({
+        titulo: 'Resultado do Sorteio',
+        conteudo: 'Acompanhe o sorteio oficial da Rifa!',
+        categoria: 'rifa',
+        lista_numeros: participantes
+      })
+    }
+    await carregarDados()
+    setCarregando(false)
+    alert('Lista de participantes salva com sucesso!')
+  }
+
+  // Executar Sorteio com Animação
+  async function executarSorteio() {
+    const confirmacao = confirm('Deseja iniciar o sorteio ao vivo agora?')
+    if (!confirmacao) return
+
+    setSorteando(true)
+    let contador = 0
+    const totalVoltas = 40
+
+    const intervaloAnimacao = setInterval(async () => {
+      const numAleatorio = Math.floor(Math.random() * 230) + 1
+      setNumeroRoleta(numAleatorio)
+      contador++
+
+      if (contador >= totalVoltas) {
+        clearInterval(intervaloAnimacao)
+        
+        // Sorteio Final
+        const numVencedor = Math.floor(Math.random() * 230) + 1
+        const nomeVencedor = participantes[numVencedor] || 'Bilhete não atribuído'
+        
+        setNumeroRoleta(numVencedor)
+        setSorteando(false)
+
+        // Grava no Banco
+        const postRifa = posts.find(p => p.categoria === 'rifa')
+        const dadosAtualizados = {
+          titulo: '🎉 Resultado Oficial do Sorteio!',
+          conteudo: `Parabéns ao ganhador do bilhete número ${numVencedor}!`,
+          categoria: 'rifa',
+          numero_sorteado: numVencedor,
+          ganhador: nomeVencedor,
+          sorteio_realizado: true,
+          lista_numeros: participantes
+        }
+
+        if (postRifa) {
+          await updatePost(postRifa.id, dadosAtualizados)
+        } else {
+          await createPost(dadosAtualizados)
+        }
+
+        await carregarDados()
+        alert(`🏆 Sorteio Concluído!\nNúmero Sorteado: ${numVencedor}\nGanhador: ${nomeVencedor}`)
+      }
+    }, 100)
+  }
+
+  // Animação de Replay para visitantes
+  function assistirReplay(postRifa) {
+    if (!postRifa || !postRifa.numero_sorteado) return
+    setReproduzindoReplay(true)
+    let contador = 0
+    const totalVoltas = 35
+
+    const intervalo = setInterval(() => {
+      setNumeroRoleta(Math.floor(Math.random() * 230) + 1)
+      contador++
+
+      if (contador >= totalVoltas) {
+        clearInterval(intervalo)
+        setNumeroRoleta(postRifa.numero_sorteado)
+        setReproduzindoReplay(false)
+      }
+    }, 100)
+  }
+
+  // Resetar / Excluir Sorteio
+  async function resetarSorteio() {
+    const postRifa = posts.find(p => p.categoria === 'rifa')
+    if (!postRifa) return
+
+    if (confirm('Tem certeza que deseja APAGAR o sorteio e permitir um novo?')) {
+      await updatePost(postRifa.id, {
+        numero_sorteado: null,
+        ganhador: null,
+        sorteio_realizado: false,
+        titulo: 'Sorteio da Rifa',
+        conteudo: 'Aguardando realização do sorteio.'
+      })
+      setNumeroRoleta('?')
+      await carregarDados()
+      alert('Sorteio resetado com sucesso!')
+    }
   }
 
   async function handleSubmit(e) {
@@ -141,6 +266,7 @@ export default function App() {
   }
 
   const postsFiltrados = posts.filter(p => aba === 'inicio' || aba === 'admin' ? true : p.categoria === aba)
+  const postRifaAtual = posts.find(p => p.categoria === 'rifa')
 
   return (
     <div className="container">
@@ -180,11 +306,11 @@ export default function App() {
         {/* Navegação */}
         <nav className="nav">
           <button onClick={() => setAba('inicio')} className={aba === 'inicio' ? 'ativo' : ''}>Início</button>
-          <button onClick={() => setAba('rifa')} className={aba === 'rifa' ? 'ativo' : ''}>Rifa / Sorteio</button>
+          <button onClick={() => setAba('rifa')} className={aba === 'rifa' ? 'ativo' : ''}>🎲 Rifa / Sorteio</button>
           <button onClick={() => setAba('galeria')} className={aba === 'galeria' ? 'ativo' : ''}>Galeria</button>
           <button onClick={() => setAba('transparencia')} className={aba === 'transparencia' ? 'ativo' : ''}>📄 Portal Transparência</button>
           <button onClick={abrirAdmin} className="btn-admin">
-            {idEditando ? '✏️ Editando Post' : '⚙️ Painel Admin'}
+            {idEditando ? '✏️️ Editando Post' : '⚙️ Painel Admin'}
           </button>
         </nav>
       </header>
@@ -193,37 +319,69 @@ export default function App() {
       <main className="conteudo">
         {aba === 'admin' && (
           <section className="painel-admin">
-            <h2>{idEditando ? 'Editar Publicação' : 'Painel Admin'}</h2>
+            <h2>⚙️ Painel de Controle</h2>
+
+            {/* Gerenciador de Participantes e Sorteio */}
+            <div style={{ background: '#f5f5f5', padding: '20px', borderRadius: '10px', marginBottom: '30px' }}>
+              <h3>🎰 Sistema de Sorteio Automático (1 a 230)</h3>
+              
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
+                <button onClick={executarSorteio} disabled={sorteando} style={{ background: '#28a745', color: '#fff', padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+                  {sorteando ? '🎲 Sorteando...' : '▶️ Realizar Sorteio Vivo'}
+                </button>
+                <button onClick={salvarListaParticipantes} disabled={carregando} style={{ background: '#007bff', color: '#fff', padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+                  💾 Salvar Nomes dos Bilhetes
+                </button>
+                {postRifaAtual?.numero_sorteado && (
+                  <button onClick={resetarSorteio} style={{ background: '#dc3545', color: '#fff', padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+                    🗑️ Resetar / Excluir Sorteio
+                  </button>
+                )}
+              </div>
+
+              {/* Tabela de Atribuição de Nomes aos Números */}
+              <details style={{ marginTop: '15px' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>📋 Lista de Números e Participantes (Clique para expandir)</summary>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px', maxHeight: '350px', overflowY: 'auto', marginTop: '15px', padding: '10px', background: '#fff', borderRadius: '5px' }}>
+                  {Array.from({ length: 230 }, (_, i) => i + 1).map(num => (
+                    <div key={num} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <strong>#{num}:</strong>
+                      <input 
+                        type="text" 
+                        placeholder="Nome do participante" 
+                        value={participantes[num] || ''} 
+                        onChange={e => handleNomeChange(num, e.target.value)}
+                        style={{ width: '100%', padding: '4px', fontSize: '12px' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </details>
+            </div>
+
+            <hr style={{ margin: '30px 0' }} />
+
+            {/* Form de Publicações Convencionais */}
+            <h2>{idEditando ? 'Editar Publicação' : 'Nova Publicação'}</h2>
             <form onSubmit={handleSubmit} className="form-admin">
-              <label>O que você quer publicar ou alterar?</label>
+              <label>O que você quer publicar?</label>
               <select value={categoria} onChange={e => setCategoria(e.target.value)}>
                 <option value="galeria">Galeria de Fotos</option>
                 <option value="transparencia">📄 Comprovante / Transparência</option>
-                <option value="rifa">Resultado da Rifa / Sorteio</option>
                 <option value="logo">🖼️ Logo / Banner do Topo</option>
               </select>
 
               {categoria !== 'logo' && (
                 <>
-                  <label>Título / Descrição do Comprovante:</label>
+                  <label>Título:</label>
                   <input type="text" value={titulo} onChange={e => setTitulo(e.target.value)} required />
 
-                  <label>Observações / Detalhes:</label>
+                  <label>Descrição:</label>
                   <textarea value={conteudo} onChange={e => setConteudo(e.target.value)} rows="3" />
                 </>
               )}
 
-              {categoria === 'rifa' && (
-                <>
-                  <label>Número Sorteado:</label>
-                  <input type="number" value={numeroSorteado} onChange={e => setNumeroSorteado(e.target.value)} />
-
-                  <label>Ganhador:</label>
-                  <input type="text" value={ganhador} onChange={e => setGanhador(e.target.value)} />
-                </>
-              )}
-
-              <label>Foto / Comprovante:</label>
+              <label>Foto:</label>
               <input type="file" accept="image/*" onChange={e => setImagem(e.target.files[0])} />
 
               <div className="botoes-form">
@@ -237,21 +395,42 @@ export default function App() {
           </section>
         )}
 
+        {/* Visualização de Sorteio na Aba RIFA */}
+        {aba === 'rifa' && (
+          <section style={{ textAlign: 'center', padding: '20px', background: '#f0f8ff', borderRadius: '15px', marginBottom: '30px' }}>
+            <h2>🎲 Sorteio da Rifa do Congresso</h2>
+            
+            <div style={{ fontSize: '72px', fontWeight: 'bold', color: '#007bff', margin: '20px 0' }}>
+              {numeroRoleta}
+            </div>
+
+            {postRifaAtual?.numero_sorteado ? (
+              <div>
+                <h3 style={{ color: '#28a745' }}>🏆 Bilhete Sorteado: #{postRifaAtual.numero_sorteado}</h3>
+                <p style={{ fontSize: '18px' }}><strong>Ganhador(a):</strong> {postRifaAtual.ganhador || 'Participante sem nome registrado'}</p>
+                
+                <button 
+                  onClick={() => assistirReplay(postRifaAtual)} 
+                  disabled={reproduzindoReplay}
+                  style={{ marginTop: '15px', padding: '10px 20px', background: '#17a2b8', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px' }}
+                >
+                  {reproduzindoReplay ? '🌀 Reproduzindo Replay...' : '▶️ Assistir Replay do Sorteio'}
+                </button>
+              </div>
+            ) : (
+              <p style={{ fontSize: '16px', color: '#666' }}>O sorteio oficial ainda não foi realizado. Aguarde a transmissão do resultado!</p>
+            )}
+          </section>
+        )}
+
         <section className="feed">
           <h2>
             {aba === 'inicio' && 'Todas as Publicações'}
-            {aba === 'rifa' && 'Resultado da Rifa'}
+            {aba === 'rifa' && 'Histórico do Sorteio'}
             {aba === 'galeria' && 'Galeria de Fotos'}
             {aba === 'transparencia' && '📄 Portal Transparência (Comprovantes)'}
             {aba === 'admin' && 'Gerenciar Publicações Existentes'}
           </h2>
-
-          {aba === 'rifa' && (
-            <div className="destaque-data-sorteio">
-              <p className="titulo-sorteio">🗓️ DATA DO SORTEIO DA RIFA:</p>
-              <h3 className="data-grande">26/09/2025</h3>
-            </div>
-          )}
 
           {postsFiltrados.length === 0 ? (
             <p>Nenhuma publicação nesta seção.</p>
@@ -264,13 +443,6 @@ export default function App() {
                     <span className="tag">{post.categoria}</span>
                     <h3>{post.titulo}</h3>
                     <p>{post.conteudo}</p>
-                    
-                    {post.categoria === 'rifa' && (
-                      <div className="info-rifa">
-                        <p><strong>🎟️ Número Sorteado:</strong> {post.numero_sorteado}</p>
-                        <p><strong>🏆 Ganhador:</strong> {post.ganhador}</p>
-                      </div>
-                    )}
 
                     <div className="interacao-card">
                       <button onClick={() => handleLike(post)} className="btn-like">
