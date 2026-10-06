@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import confetti from 'canvas-confetti'
 import { getPosts, getLogo, createPost, updatePost, deletePost, uploadImagem } from './postsService'
 import './App.css'
 
@@ -37,6 +36,7 @@ export default function App() {
   const [numeroRoleta2, setNumeroRoleta2] = useState('?')
   const [sorteando, setSorteando] = useState(false)
   const [reproduzindoReplay, setReproduzindoReplay] = useState(false)
+  const [destaqueGanhador, setDestaqueGanhador] = useState(false)
 
   useEffect(() => {
     carregarDados()
@@ -73,14 +73,6 @@ export default function App() {
         setNumeroRoleta2(numeros[1] || '?')
       }
     }
-  }
-
-  function dispararConfetes() {
-    confetti({
-      particleCount: 150,
-      spread: 90,
-      origin: { y: 0.6 }
-    })
   }
 
   function abrirAdmin() {
@@ -128,6 +120,7 @@ export default function App() {
     if (!confirmacao) return
 
     setSorteando(true)
+    setDestaqueGanhador(false)
     let contador = 0
     const totalVoltas = 40
 
@@ -151,8 +144,7 @@ export default function App() {
         setNumeroRoleta1(numVencedor1)
         setNumeroRoleta2(numVencedor2)
         setSorteando(false)
-
-        dispararConfetes()
+        setDestaqueGanhador(true)
 
         const resultadoNumeros = `${numVencedor1} / ${numVencedor2}`
         const resultadoGanhadores = `🥇 1º Prêmio: Bilhete #${numVencedor1} (${nomeVencedor1}) | 🥈 2º Prêmio: Bilhete #${numVencedor2} (${nomeVencedor2})`
@@ -185,6 +177,7 @@ export default function App() {
     
     const numerosFinais = String(postRifa.numero_sorteado).split(' / ')
     setReproduzindoReplay(true)
+    setDestaqueGanhador(false)
     let contador = 0
     const totalVoltas = 35
 
@@ -198,7 +191,7 @@ export default function App() {
         setNumeroRoleta1(numerosFinais[0] || '?')
         setNumeroRoleta2(numerosFinais[1] || '?')
         setReproduzindoReplay(false)
-        dispararConfetes()
+        setDestaqueGanhador(true)
       }
     }, 100)
   }
@@ -217,6 +210,7 @@ export default function App() {
       })
       setNumeroRoleta1('?')
       setNumeroRoleta2('?')
+      setDestaqueGanhador(false)
       await carregarDados()
       alert('Sorteio resetado com sucesso!')
     }
@@ -419,17 +413,34 @@ export default function App() {
           </section>
         )}
 
-        {/* Visualização de Sorteio Duplo na Aba RIFA */}
+        {/* Visualização do Sorteio na Aba RIFA */}
         {aba === 'rifa' && (
           <section style={{ textAlign: 'center', padding: '30px 20px', background: 'linear-gradient(135deg, #e6f2ff 0%, #ffffff 100%)', borderRadius: '15px', marginBottom: '30px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
             <h2 style={{ fontSize: '28px', color: '#1a252f' }}>🎲 Sorteio Oficial da Rifa do Congresso</h2>
             
             <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', margin: '25px 0', flexWrap: 'wrap' }}>
-              <div style={{ background: '#fff', padding: '20px 35px', borderRadius: '12px', boxShadow: '0 6px 12px rgba(0,0,0,0.08)', borderTop: '4px solid #007bff' }}>
+              <div style={{ 
+                background: '#fff', 
+                padding: '20px 35px', 
+                borderRadius: '12px', 
+                boxShadow: destaqueGanhador ? '0 0 20px rgba(0, 123, 255, 0.6)' : '0 6px 12px rgba(0,0,0,0.08)', 
+                borderTop: '4px solid #007bff',
+                transform: destaqueGanhador ? 'scale(1.05)' : 'scale(1)',
+                transition: 'all 0.3s ease'
+              }}>
                 <span style={{ fontSize: '14px', color: '#666', fontWeight: 'bold', display: 'block' }}>1º Sorteado</span>
                 <span style={{ fontSize: '60px', fontWeight: 'bold', color: '#007bff' }}>{numeroRoleta1}</span>
               </div>
-              <div style={{ background: '#fff', padding: '20px 35px', borderRadius: '12px', boxShadow: '0 6px 12px rgba(0,0,0,0.08)', borderTop: '4px solid #28a745' }}>
+
+              <div style={{ 
+                background: '#fff', 
+                padding: '20px 35px', 
+                borderRadius: '12px', 
+                boxShadow: destaqueGanhador ? '0 0 20px rgba(40, 167, 69, 0.6)' : '0 6px 12px rgba(0,0,0,0.08)', 
+                borderTop: '4px solid #28a745',
+                transform: destaqueGanhador ? 'scale(1.05)' : 'scale(1)',
+                transition: 'all 0.3s ease'
+              }}>
                 <span style={{ fontSize: '14px', color: '#666', fontWeight: 'bold', display: 'block' }}>2º Sorteado</span>
                 <span style={{ fontSize: '60px', fontWeight: 'bold', color: '#28a745' }}>{numeroRoleta2}</span>
               </div>
@@ -437,7 +448,7 @@ export default function App() {
 
             {foiRealizado ? (
               <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', display: 'inline-block', maxWidth: '600px', width: '100%', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-                <span style={{ background: '#28a745', color: '#fff', padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>
+                <span style={{ background: '#28a745', color: '#fff', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>
                   ✓ Sorteio Oficial Concluído
                 </span>
                 
@@ -451,7 +462,7 @@ export default function App() {
                   disabled={reproduzindoReplay}
                   style={{ marginTop: '15px', padding: '12px 25px', background: '#007bff', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold', transition: '0.2s', boxShadow: '0 4px 8px rgba(0,123,255,0.3)' }}
                 >
-                  {reproduzindoReplay ? '🌀 Sorteando...' : '🎉 Assistir Replay do Sorteio (com animação)'}
+                  {reproduzindoReplay ? '🌀 Sorteando ao vivo...' : '▶️ Assistir Replay do Sorteio'}
                 </button>
               </div>
             ) : (
