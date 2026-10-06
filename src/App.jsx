@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import confetti from 'canvas-confetti'
 import { getPosts, getLogo, createPost, updatePost, deletePost, uploadImagem } from './postsService'
 import './App.css'
 
@@ -32,7 +33,6 @@ export default function App() {
     return iniciais
   })
   
-  // Estados para 2 números
   const [numeroRoleta1, setNumeroRoleta1] = useState('?')
   const [numeroRoleta2, setNumeroRoleta2] = useState('?')
   const [sorteando, setSorteando] = useState(false)
@@ -64,17 +64,23 @@ export default function App() {
     setPosts(postsDados)
     if (logoSalva) setLogoUrl(logoSalva)
 
-    // Carrega dados da Rifa se existirem
     const postRifa = postsDados.find(p => p.categoria === 'rifa')
     if (postRifa) {
       if (postRifa.lista_numeros) setParticipantes(postRifa.lista_numeros)
       if (postRifa.numero_sorteado) {
-        // Separa os dois números armazenados (ex: "45 / 120")
         const numeros = String(postRifa.numero_sorteado).split(' / ')
         setNumeroRoleta1(numeros[0] || '?')
         setNumeroRoleta2(numeros[1] || '?')
       }
     }
+  }
+
+  function dispararConfetes() {
+    confetti({
+      particleCount: 120,
+      spread: 80,
+      origin: { y: 0.6 }
+    })
   }
 
   function abrirAdmin() {
@@ -93,12 +99,10 @@ export default function App() {
     await updatePost(post.id, { likes: novosLikes })
   }
 
-  // Atualizar Lista de Participantes (Nome do número)
   function handleNomeChange(numero, nome) {
     setParticipantes(prev => ({ ...prev, [numero]: nome }))
   }
 
-  // Salvar Lista de Participantes no Supabase
   async function salvarListaParticipantes() {
     setCarregando(true)
     const postRifa = posts.find(p => p.categoria === 'rifa')
@@ -107,10 +111,11 @@ export default function App() {
       await updatePost(postRifa.id, { lista_numeros: participantes })
     } else {
       await createPost({
-        titulo: 'Resultado do Sorteio',
-        conteudo: 'Acompanhe o sorteio oficial da Rifa!',
+        titulo: 'Sorteio da Rifa',
+        conteudo: 'Aguardando realização do sorteio.',
         categoria: 'rifa',
-        lista_numeros: participantes
+        lista_numeros: participantes,
+        sorteio_realizado: false
       })
     }
     await carregarDados()
@@ -118,9 +123,8 @@ export default function App() {
     alert('Lista de participantes salva com sucesso!')
   }
 
-  // Executar Sorteio de 2 Números Simultâneos
   async function executarSorteio() {
-    const confirmacao = confirm('Deseja iniciar o sorteio de 2 números ao vivo agora?')
+    const confirmacao = confirm('Deseja iniciar o sorteio oficial de 2 números ao vivo agora?')
     if (!confirmacao) return
 
     setSorteando(true)
@@ -135,28 +139,28 @@ export default function App() {
       if (contador >= totalVoltas) {
         clearInterval(intervaloAnimacao)
         
-        // Sorteia dois números distintos
         const numVencedor1 = Math.floor(Math.random() * 230) + 1
         let numVencedor2 = Math.floor(Math.random() * 230) + 1
         while (numVencedor2 === numVencedor1) {
           numVencedor2 = Math.floor(Math.random() * 230) + 1
         }
 
-        const nomeVencedor1 = participantes[numVencedor1] || 'Sem nome'
-        const nomeVencedor2 = participantes[numVencedor2] || 'Sem nome'
+        const nomeVencedor1 = participantes[numVencedor1] || 'Sem nome registrado'
+        const nomeVencedor2 = participantes[numVencedor2] || 'Sem nome registrado'
         
         setNumeroRoleta1(numVencedor1)
         setNumeroRoleta2(numVencedor2)
         setSorteando(false)
 
-        const resultadoNumeros = `${numVencedor1} / ${numVencedor2}`
-        const resultadoGanhadores = `1º Prêmio: #${numVencedor1} (${nomeVencedor1}) | 2º Prêmio: #${numVencedor2} (${nomeVencedor2})`
+        dispararConfetes()
 
-        // Grava no Banco
+        const resultadoNumeros = `${numVencedor1} / ${numVencedor2}`
+        const resultadoGanhadores = `🥇 1º Prêmio: Bilhete #${numVencedor1} (${nomeVencedor1}) | 🥈 2º Prêmio: Bilhete #${numVencedor2} (${nomeVencedor2})`
+
         const postRifa = posts.find(p => p.categoria === 'rifa')
         const dadosAtualizados = {
           titulo: '🎉 Resultado Oficial do Sorteio Duplo!',
-          conteudo: `Parabéns aos ganhadores!`,
+          conteudo: `Sorteio oficial concluído! Parabéns aos ganhadores!`,
           categoria: 'rifa',
           numero_sorteado: resultadoNumeros,
           ganhador: resultadoGanhadores,
@@ -171,12 +175,11 @@ export default function App() {
         }
 
         await carregarDados()
-        alert(`🏆 Sorteio Concluído!\n\n${resultadoGanhadores}`)
+        alert(`🏆 SORTEIO CONCLUÍDO COM SUCESSO!\n\n${resultadoGanhadores}`)
       }
     }, 100)
   }
 
-  // Animação de Replay para 2 números
   function assistirReplay(postRifa) {
     if (!postRifa || !postRifa.numero_sorteado) return
     
@@ -195,16 +198,16 @@ export default function App() {
         setNumeroRoleta1(numerosFinais[0] || '?')
         setNumeroRoleta2(numerosFinais[1] || '?')
         setReproduzindoReplay(false)
+        dispararConfetes()
       }
     }, 100)
   }
 
-  // Resetar / Excluir Sorteio
   async function resetarSorteio() {
     const postRifa = posts.find(p => p.categoria === 'rifa')
     if (!postRifa) return
 
-    if (confirm('Tem certeza que deseja APAGAR o sorteio e permitir um novo?')) {
+    if (confirm('Tem certeza que deseja APAGAR o resultado do sorteio?')) {
       await updatePost(postRifa.id, {
         numero_sorteado: null,
         ganhador: null,
@@ -290,6 +293,7 @@ export default function App() {
 
   const postsFiltrados = posts.filter(p => aba === 'inicio' || aba === 'admin' ? true : p.categoria === aba)
   const postRifaAtual = posts.find(p => p.categoria === 'rifa')
+  const foiRealizado = postRifaAtual && postRifaAtual.sorteio_realizado
 
   return (
     <div className="container">
@@ -342,29 +346,27 @@ export default function App() {
       <main className="conteudo">
         {aba === 'admin' && (
           <section className="painel-admin">
-            <h2>⚙️ Painel de Controle</h2>
+            <h2>⚙️ Painel de Controle do Sorteio</h2>
 
-            {/* Gerenciador de Participantes e Sorteio Duplo */}
             <div style={{ background: '#f5f5f5', padding: '20px', borderRadius: '10px', marginBottom: '30px' }}>
               <h3>🎰 Sistema de Sorteio Automático (2 Números Simultâneos)</h3>
               
               <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
-                <button onClick={executarSorteio} disabled={sorteando} style={{ background: '#28a745', color: '#fff', padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-                  {sorteando ? '🎲 Sorteando...' : '▶️ Realizar Sorteio Duplo ao Vivo'}
+                <button onClick={executarSorteio} disabled={sorteando} style={{ background: '#28a745', color: '#fff', padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
+                  {sorteando ? '🎲 Sorteando...' : '▶️ Realizar Sorteio Duplo Oficial'}
                 </button>
                 <button onClick={salvarListaParticipantes} disabled={carregando} style={{ background: '#007bff', color: '#fff', padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-                  💾 Salvar Nomes dos Bilhetes
+                  💾 Salvar Lista de Participantes
                 </button>
-                {postRifaAtual?.numero_sorteado && (
+                {foiRealizado && (
                   <button onClick={resetarSorteio} style={{ background: '#dc3545', color: '#fff', padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
                     🗑️ Resetar / Excluir Sorteio
                   </button>
                 )}
               </div>
 
-              {/* Tabela de Atribuição de Nomes aos Números */}
               <details style={{ marginTop: '15px' }}>
-                <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>📋 Lista de Números e Participantes (1 ao 230)</summary>
+                <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>📋 Atribuir Nomes aos Números (1 ao 230)</summary>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px', maxHeight: '350px', overflowY: 'auto', marginTop: '15px', padding: '10px', background: '#fff', borderRadius: '5px' }}>
                   {Array.from({ length: 230 }, (_, i) => i + 1).map(num => (
                     <div key={num} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -384,7 +386,6 @@ export default function App() {
 
             <hr style={{ margin: '30px 0' }} />
 
-            {/* Form de Publicações Convencionais */}
             <h2>{idEditando ? 'Editar Publicação' : 'Nova Publicação'}</h2>
             <form onSubmit={handleSubmit} className="form-admin">
               <label>O que você quer publicar?</label>
@@ -420,82 +421,12 @@ export default function App() {
 
         {/* Visualização de Sorteio Duplo na Aba RIFA */}
         {aba === 'rifa' && (
-          <section style={{ textAlign: 'center', padding: '20px', background: '#f0f8ff', borderRadius: '15px', marginBottom: '30px' }}>
-            <h2>🎲 Sorteio da Rifa do Congresso</h2>
+          <section style={{ textAlign: 'center', padding: '30px 20px', background: 'linear-gradient(135deg, #e6f2ff 0%, #ffffff 100%)', borderRadius: '15px', marginBottom: '30px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+            <h2 style={{ fontSize: '28px', color: '#1a252f' }}>🎲 Sorteio Oficial da Rifa do Congresso</h2>
             
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', margin: '20px 0' }}>
-              <div style={{ background: '#fff', padding: '15px 30px', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                <span style={{ fontSize: '14px', color: '#666', display: 'block' }}>1º Sorteado</span>
-                <span style={{ fontSize: '64px', fontWeight: 'bold', color: '#007bff' }}>{numeroRoleta1}</span>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', margin: '25px 0', flexWrap: 'wrap' }}>
+              <div style={{ background: '#fff', padding: '20px 35px', borderRadius: '12px', boxShadow: '0 6px 12px rgba(0,0,0,0.08)', borderTop: '4px solid #007bff' }}>
+                <span style={{ fontSize: '14px', color: '#666', fontWeight: 'bold', display: 'block' }}>1º Sorteado</span>
+                <span style={{ fontSize: '60px', fontWeight: 'bold', color: '#007bff' }}>{numeroRoleta1}</span>
               </div>
-              <div style={{ background: '#fff', padding: '15px 30px', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                <span style={{ fontSize: '14px', color: '#666', display: 'block' }}>2º Sorteado</span>
-                <span style={{ fontSize: '64px', fontWeight: 'bold', color: '#28a745' }}>{numeroRoleta2}</span>
-              </div>
-            </div>
-
-            {postRifaAtual?.numero_sorteado ? (
-              <div>
-                <h3 style={{ color: '#28a745' }}>🏆 Resultado dos Ganhadores:</h3>
-                <p style={{ fontSize: '16px', background: '#fff', padding: '10px', borderRadius: '8px', display: 'inline-block' }}>
-                  {postRifaAtual.ganhador}
-                </p>
-                
-                <br />
-                <button 
-                  onClick={() => assistirReplay(postRifaAtual)} 
-                  disabled={reproduzindoReplay}
-                  style={{ marginTop: '15px', padding: '10px 20px', background: '#17a2b8', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px' }}
-                >
-                  {reproduzindoReplay ? '🌀 Reproduzindo Replay...' : '▶️ Assistir Replay do Sorteio'}
-                </button>
-              </div>
-            ) : (
-              <p style={{ fontSize: '16px', color: '#666' }}>O sorteio oficial ainda não foi realizado. Aguarde a transmissão do resultado!</p>
-            )}
-          </section>
-        )}
-
-        <section className="feed">
-          <h2>
-            {aba === 'inicio' && 'Todas as Publicações'}
-            {aba === 'rifa' && 'Histórico do Sorteio'}
-            {aba === 'galeria' && 'Galeria de Fotos'}
-            {aba === 'transparencia' && '📄 Portal Transparência (Comprovantes)'}
-            {aba === 'admin' && 'Gerenciar Publicações Existentes'}
-          </h2>
-
-          {postsFiltrados.length === 0 ? (
-            <p>Nenhuma publicação nesta seção.</p>
-          ) : (
-            <div className="grid-posts">
-              {postsFiltrados.map(post => (
-                <div key={post.id} className="card-post">
-                  {post.imagem_url && <img src={post.imagem_url} alt={post.titulo} />}
-                  <div className="card-corpo">
-                    <span className="tag">{post.categoria}</span>
-                    <h3>{post.titulo}</h3>
-                    <p>{post.conteudo}</p>
-
-                    <div className="interacao-card">
-                      <button onClick={() => handleLike(post)} className="btn-like">
-                        ❤️ {post.likes || 0}
-                      </button>
-                    </div>
-
-                    {aba === 'admin' && (
-                      <div className="acoes-card" style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
-                        <button onClick={() => prepararEdicao(post)}>✏️ Editar</button>
-                        <button onClick={() => handleDelete(post.id)} className="btn-deletar">🗑️ Excluir</button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      </main>
-    </div>
-  )
-}
+              <div style={{ background: '#fff', padding: '20px 35px', borderRadius: '12px', boxShadow: '0 6px 12px rgba(0,0,0,0.08)', borderTop: '4
