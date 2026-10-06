@@ -59,18 +59,18 @@ export default function App() {
     return () => clearInterval(intervalo)
   }, [])
 
-  // Carrega os dados persistidos da base de dados (Supabase)
+  // Carrega os dados excluindo qualquer vestígio do portal de transparência
   async function carregarDados() {
     const postsDados = await getPosts()
     const logoSalva = await getLogo()
     
-    // Filtra para ignorar qualquer post antigo que tenha a categoria 'transparencia'
-    const postsFiltradosSemTransparencia = (postsDados || []).filter(p => p.categoria !== 'transparencia')
-    setPosts(postsFiltradosSemTransparencia)
+    // Remove qualquer publicação antiga da categoria 'transparencia' ou 'portaltransparencia'
+    const postsLimpos = (postsDados || []).filter(p => p.categoria !== 'transparencia' && p.categoria !== 'portaltransparencia')
+    setPosts(postsLimpos)
     
     if (logoSalva) setLogoUrl(logoSalva)
 
-    const postRifa = postsFiltradosSemTransparencia.find(p => p.categoria === 'rifa')
+    const postRifa = postsLimpos.find(p => p.categoria === 'rifa')
     if (postRifa) {
       if (postRifa.lista_numeros) setParticipantes(postRifa.lista_numeros)
       
@@ -137,6 +137,7 @@ export default function App() {
     alert('Lista de participantes salva com sucesso!')
   }
 
+  // EXECUTA O SORTEIO NO PAINEL ADMIN
   async function executarSorteio() {
     const confirmacao = confirm('Deseja iniciar o sorteio oficial de 2 números ao vivo agora?')
     if (!confirmacao) return
@@ -316,9 +317,9 @@ export default function App() {
     setGanhador('')
   }
 
-  // O filtro agora garante que apenas 'galeria' e 'rifa' fiquem disponíveis
+  // Filtra publicações excluindo 'transparencia'
   const postsFiltrados = posts.filter(p => {
-    if (p.categoria === 'transparencia') return false
+    if (p.categoria === 'transparencia' || p.categoria === 'portaltransparencia') return false
     if (aba === 'inicio' || aba === 'admin') return true
     return p.categoria === aba
   })
@@ -361,13 +362,13 @@ export default function App() {
           </div>
         </div>
 
-        {/* Navegação */}
+        {/* Navegação principal sem a transparência */}
         <nav className="nav">
           <button onClick={() => setAba('inicio')} className={aba === 'inicio' ? 'ativo' : ''}>Início</button>
           <button onClick={() => setAba('rifa')} className={aba === 'rifa' ? 'ativo' : ''}>🎲 Rifa / Sorteio</button>
           <button onClick={() => setAba('galeria')} className={aba === 'galeria' ? 'ativo' : ''}>Galeria</button>
           <button onClick={abrirAdmin} className={aba === 'admin' ? 'btn-admin ativo' : 'btn-admin'}>
-            {adminAutenticado ? (idEditando ? '✏️ Editando Post' : '⚙️ Painel Admin') : '🔒 Acesso Admin'}
+            {adminAutenticado ? (idEditando ? '✏️️ Editando Post' : '⚙️ Painel Admin') : '🔒 Acesso Admin'}
           </button>
         </nav>
       </header>
@@ -383,18 +384,22 @@ export default function App() {
               </button>
             </div>
 
-            <div style={{ background: '#f5f5f5', padding: '20px', borderRadius: '10px', marginBottom: '30px' }}>
-              <h3>🎰 Sistema de Sorteio Automático (2 Números Simultâneos)</h3>
+            {/* ONDE REALIZA O SORTEIO */}
+            <div style={{ background: '#eef6ff', padding: '20px', borderRadius: '10px', marginBottom: '30px', border: '2px solid #007bff' }}>
+              <h3 style={{ color: '#0056b3', marginTop: 0 }}>🎰 AQUI VOCÊ REALIZA O SORTEIO</h3>
+              <p style={{ fontSize: '14px', color: '#555' }}>
+                Clique no botão verde abaixo para disparar a roleta ao vivo. O resultado será publicado na aba "🎲 Rifa / Sorteio".
+              </p>
               
               <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
-                <button onClick={executarSorteio} disabled={sorteando} style={{ background: '#28a745', color: '#fff', padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
+                <button onClick={executarSorteio} disabled={sorteando} style={{ background: '#28a745', color: '#fff', padding: '12px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>
                   {sorteando ? '🎲 Sorteando...' : '▶️ Realizar Sorteio Duplo Oficial'}
                 </button>
-                <button onClick={salvarListaParticipantes} disabled={carregando} style={{ background: '#007bff', color: '#fff', padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+                <button onClick={salvarListaParticipantes} disabled={carregando} style={{ background: '#007bff', color: '#fff', padding: '12px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
                   💾 Salvar Lista de Participantes
                 </button>
                 {foiRealizado && (
-                  <button onClick={resetarSorteio} style={{ background: '#dc3545', color: '#fff', padding: '10px 15px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+                  <button onClick={resetarSorteio} style={{ background: '#dc3545', color: '#fff', padding: '12px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
                     🗑️ Resetar / Excluir Sorteio
                   </button>
                 )}
@@ -542,7 +547,7 @@ export default function App() {
                     {aba === 'admin' && adminAutenticado && (
                       <div className="acoes-card" style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
                         <button onClick={() => prepararEdicao(post)}>✏️ Editar</button>
-                        <button onClick={() => handleDelete(post.id)} className="btn-deletar">🗑️️ Excluir</button>
+                        <button onClick={() => handleDelete(post.id)} className="btn-deletar">🗑 Excluir</button>
                       </div>
                     )}
                   </div>
