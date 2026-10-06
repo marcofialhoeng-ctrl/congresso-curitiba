@@ -70,12 +70,16 @@ export default function App() {
     if (postRifa) {
       if (postRifa.lista_numeros) setParticipantes(postRifa.lista_numeros)
       
-      // Se o sorteio já foi realizado anteriormente, recupera os números e fixa no ecrã
+      // Se o sorteio já foi realizado anteriormente, recupera os números e fixa na tela
       if (postRifa.numero_sorteado) {
         const numeros = String(postRifa.numero_sorteado).split(' / ')
         setNumeroRoleta1(numeros[0] || '?')
         setNumeroRoleta2(numeros[1] || '?')
         setDestaqueGanhador(true)
+      } else {
+        setNumeroRoleta1('?')
+        setNumeroRoleta2('?')
+        setDestaqueGanhador(false)
       }
     }
   }
@@ -130,7 +134,7 @@ export default function App() {
     alert('Lista de participantes salva com sucesso!')
   }
 
-  // Executa o sorteio e SALVA DEFINITIVAMENTE no banco de dados
+  // Executa o sorteio e GARANTE o salvamento no banco de dados
   async function executarSorteio() {
     const confirmacao = confirm('Deseja iniciar o sorteio oficial de 2 números ao vivo agora?')
     if (!confirmacao) return
@@ -176,15 +180,19 @@ export default function App() {
           lista_numeros: participantes
         }
 
-        // Grava no banco de dados
-        if (postRifa) {
-          await updatePost(postRifa.id, dadosAtualizados)
+        let resultadoSalvo = null
+        if (postRifa && postRifa.id) {
+          resultadoSalvo = await updatePost(postRifa.id, dadosAtualizados)
         } else {
-          await createPost(dadosAtualizados)
+          resultadoSalvo = await createPost(dadosAtualizados)
         }
 
-        await carregarDados()
-        alert(`🏆 SORTEIO CONCLUÍDO E SALVO COM SUCESSO!\n\n${resultadoGanhadores}`)
+        if (resultadoSalvo) {
+          await carregarDados()
+          alert(`🏆 SORTEIO CONCLUÍDO E SALVO NO BANCO!\n\n${resultadoGanhadores}`)
+        } else {
+          alert('⚠️ Ocorreu um erro ao salvar o resultado no Supabase. Verifique se o RLS ou as colunas da tabela "posts" estão configuradas corretamente.')
+        }
       }
     }, 100)
   }
@@ -522,7 +530,7 @@ export default function App() {
 
                     <div className="interacao-card">
                       <button onClick={() => handleLike(post)} className="btn-like">
-                        ❤️️ {post.likes || 0}
+                        ❤️ {post.likes || 0}
                       </button>
                     </div>
 
