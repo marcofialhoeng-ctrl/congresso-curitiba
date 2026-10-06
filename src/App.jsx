@@ -63,10 +63,14 @@ export default function App() {
   async function carregarDados() {
     const postsDados = await getPosts()
     const logoSalva = await getLogo()
-    setPosts(postsDados)
+    
+    // Filtra para ignorar qualquer post antigo que tenha a categoria 'transparencia'
+    const postsFiltradosSemTransparencia = (postsDados || []).filter(p => p.categoria !== 'transparencia')
+    setPosts(postsFiltradosSemTransparencia)
+    
     if (logoSalva) setLogoUrl(logoSalva)
 
-    const postRifa = postsDados.find(p => p.categoria === 'rifa')
+    const postRifa = postsFiltradosSemTransparencia.find(p => p.categoria === 'rifa')
     if (postRifa) {
       if (postRifa.lista_numeros) setParticipantes(postRifa.lista_numeros)
       
@@ -312,7 +316,13 @@ export default function App() {
     setGanhador('')
   }
 
-  const postsFiltrados = posts.filter(p => aba === 'inicio' || aba === 'admin' ? true : p.categoria === aba)
+  // O filtro agora garante que apenas 'galeria' e 'rifa' fiquem disponíveis
+  const postsFiltrados = posts.filter(p => {
+    if (p.categoria === 'transparencia') return false
+    if (aba === 'inicio' || aba === 'admin') return true
+    return p.categoria === aba
+  })
+
   const postRifaAtual = posts.find(p => p.categoria === 'rifa')
   const foiRealizado = postRifaAtual && postRifaAtual.sorteio_realizado
 
@@ -351,7 +361,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Navegação sem a Transparência */}
+        {/* Navegação */}
         <nav className="nav">
           <button onClick={() => setAba('inicio')} className={aba === 'inicio' ? 'ativo' : ''}>Início</button>
           <button onClick={() => setAba('rifa')} className={aba === 'rifa' ? 'ativo' : ''}>🎲 Rifa / Sorteio</button>
@@ -532,7 +542,7 @@ export default function App() {
                     {aba === 'admin' && adminAutenticado && (
                       <div className="acoes-card" style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
                         <button onClick={() => prepararEdicao(post)}>✏️ Editar</button>
-                        <button onClick={() => handleDelete(post.id)} className="btn-deletar">🗑️ Excluir</button>
+                        <button onClick={() => handleDelete(post.id)} className="btn-deletar">🗑️️ Excluir</button>
                       </div>
                     )}
                   </div>
