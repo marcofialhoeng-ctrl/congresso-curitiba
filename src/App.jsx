@@ -77,8 +77,8 @@ export default function App() {
 
   function dispararConfetes() {
     confetti({
-      particleCount: 120,
-      spread: 80,
+      particleCount: 150,
+      spread: 90,
       origin: { y: 0.6 }
     })
   }
@@ -429,4 +429,79 @@ export default function App() {
                 <span style={{ fontSize: '14px', color: '#666', fontWeight: 'bold', display: 'block' }}>1º Sorteado</span>
                 <span style={{ fontSize: '60px', fontWeight: 'bold', color: '#007bff' }}>{numeroRoleta1}</span>
               </div>
-              <div style={{ background: '#fff', padding: '20px 35px', borderRadius: '12px', boxShadow: '0 6px 12px rgba(0,0,0,0.08)', borderTop: '4
+              <div style={{ background: '#fff', padding: '20px 35px', borderRadius: '12px', boxShadow: '0 6px 12px rgba(0,0,0,0.08)', borderTop: '4px solid #28a745' }}>
+                <span style={{ fontSize: '14px', color: '#666', fontWeight: 'bold', display: 'block' }}>2º Sorteado</span>
+                <span style={{ fontSize: '60px', fontWeight: 'bold', color: '#28a745' }}>{numeroRoleta2}</span>
+              </div>
+            </div>
+
+            {foiRealizado ? (
+              <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', display: 'inline-block', maxWidth: '600px', width: '100%', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+                <span style={{ background: '#28a745', color: '#fff', padding: '5px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>
+                  ✓ Sorteio Oficial Concluído
+                </span>
+                
+                <h3 style={{ color: '#1a252f', marginTop: '15px', fontSize: '20px' }}>🏆 Ganhadores Oficiais:</h3>
+                <p style={{ fontSize: '16px', color: '#333', lineHeight: '1.6', fontWeight: '500' }}>
+                  {postRifaAtual.ganhador}
+                </p>
+
+                <button 
+                  onClick={() => assistirReplay(postRifaAtual)} 
+                  disabled={reproduzindoReplay}
+                  style={{ marginTop: '15px', padding: '12px 25px', background: '#007bff', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold', transition: '0.2s', boxShadow: '0 4px 8px rgba(0,123,255,0.3)' }}
+                >
+                  {reproduzindoReplay ? '🌀 Sorteando...' : '🎉 Assistir Replay do Sorteio (com animação)'}
+                </button>
+              </div>
+            ) : (
+              <p style={{ fontSize: '16px', color: '#666', fontStyle: 'italic' }}>
+                ⏳ O sorteio oficial ainda não foi realizado. Aguarde a transmissão do resultado!
+              </p>
+            )}
+          </section>
+        )}
+
+        <section className="feed">
+          <h2>
+            {aba === 'inicio' && 'Todas as Publicações'}
+            {aba === 'rifa' && 'Histórico do Sorteio'}
+            {aba === 'galeria' && 'Galeria de Fotos'}
+            {aba === 'transparencia' && '📄 Portal Transparência (Comprovantes)'}
+            {aba === 'admin' && 'Gerenciar Publicações Existentes'}
+          </h2>
+
+          {postsFiltrados.length === 0 ? (
+            <p>Nenhuma publicação nesta seção.</p>
+          ) : (
+            <div className="grid-posts">
+              {postsFiltrados.map(post => (
+                <div key={post.id} className="card-post">
+                  {post.imagem_url && <img src={post.imagem_url} alt={post.titulo} />}
+                  <div className="card-corpo">
+                    <span className="tag">{post.categoria}</span>
+                    <h3>{post.titulo}</h3>
+                    <p>{post.conteudo}</p>
+
+                    <div className="interacao-card">
+                      <button onClick={() => handleLike(post)} className="btn-like">
+                        ❤️ {post.likes || 0}
+                      </button>
+                    </div>
+
+                    {aba === 'admin' && (
+                      <div className="acoes-card" style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
+                        <button onClick={() => prepararEdicao(post)}>✏️ Editar</button>
+                        <button onClick={() => handleDelete(post.id)} className="btn-deletar">🗑️ Excluir</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
+  )
+}
