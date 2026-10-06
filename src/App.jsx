@@ -59,6 +59,7 @@ export default function App() {
     return () => clearInterval(intervalo)
   }, [])
 
+  // Carrega os dados persistidos da base de dados (Supabase)
   async function carregarDados() {
     const postsDados = await getPosts()
     const logoSalva = await getLogo()
@@ -68,10 +69,13 @@ export default function App() {
     const postRifa = postsDados.find(p => p.categoria === 'rifa')
     if (postRifa) {
       if (postRifa.lista_numeros) setParticipantes(postRifa.lista_numeros)
+      
+      // Se o sorteio já foi realizado anteriormente, recupera os números e fixa no ecrã
       if (postRifa.numero_sorteado) {
         const numeros = String(postRifa.numero_sorteado).split(' / ')
         setNumeroRoleta1(numeros[0] || '?')
         setNumeroRoleta2(numeros[1] || '?')
+        setDestaqueGanhador(true)
       }
     }
   }
@@ -126,6 +130,7 @@ export default function App() {
     alert('Lista de participantes salva com sucesso!')
   }
 
+  // Executa o sorteio e SALVA DEFINITIVAMENTE no banco de dados
   async function executarSorteio() {
     const confirmacao = confirm('Deseja iniciar o sorteio oficial de 2 números ao vivo agora?')
     if (!confirmacao) return
@@ -171,6 +176,7 @@ export default function App() {
           lista_numeros: participantes
         }
 
+        // Grava no banco de dados
         if (postRifa) {
           await updatePost(postRifa.id, dadosAtualizados)
         } else {
@@ -178,7 +184,7 @@ export default function App() {
         }
 
         await carregarDados()
-        alert(`🏆 SORTEIO CONCLUÍDO COM SUCESSO!\n\n${resultadoGanhadores}`)
+        alert(`🏆 SORTEIO CONCLUÍDO E SALVO COM SUCESSO!\n\n${resultadoGanhadores}`)
       }
     }, 100)
   }
@@ -469,7 +475,7 @@ export default function App() {
             {foiRealizado ? (
               <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', display: 'inline-block', maxWidth: '600px', width: '100%', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
                 <span style={{ background: '#28a745', color: '#fff', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>
-                  ✓ Sorteio Oficial Concluído
+                  ✓ Sorteio Oficial Concluído (Salvo)
                 </span>
                 
                 <h3 style={{ color: '#1a252f', marginTop: '15px', fontSize: '20px' }}>🏆 Ganhadores Oficiais:</h3>
@@ -516,7 +522,7 @@ export default function App() {
 
                     <div className="interacao-card">
                       <button onClick={() => handleLike(post)} className="btn-like">
-                        ❤️ {post.likes || 0}
+                        ❤️️ {post.likes || 0}
                       </button>
                     </div>
 
