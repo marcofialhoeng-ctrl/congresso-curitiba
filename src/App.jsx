@@ -6,6 +6,7 @@ export default function App() {
   const [posts, setPosts] = useState([])
   const [logoUrl, setLogoUrl] = useState('')
   const [aba, setAba] = useState('inicio') // inicio, rifa, galeria, transparencia, admin
+  const [adminAutenticado, setAdminAutenticado] = useState(false)
   
   // WhatsApp & Autenticação
   const NUMERO_WHATSAPP = '5531995309939'
@@ -76,13 +77,23 @@ export default function App() {
   }
 
   function abrirAdmin() {
-    if (aba === 'admin') return
+    if (adminAutenticado) {
+      setAba('admin')
+      return
+    }
+
     const senhaDigitada = prompt('Digite a senha para acessar o Painel Admin:')
     if (senhaDigitada === SENHA_ADMIN) {
+      setAdminAutenticado(true)
       setAba('admin')
     } else if (senhaDigitada !== null) {
       alert('Senha incorreta!')
     }
+  }
+
+  function sairAdmin() {
+    setAdminAutenticado(false)
+    setAba('inicio')
   }
 
   async function handleLike(post) {
@@ -258,6 +269,10 @@ export default function App() {
   }
 
   function prepararEdicao(post) {
+    if (!adminAutenticado) {
+      abrirAdmin()
+      return
+    }
     setIdEditando(post.id)
     setTitulo(post.titulo || '')
     setConteudo(post.conteudo || '')
@@ -330,17 +345,22 @@ export default function App() {
           <button onClick={() => setAba('rifa')} className={aba === 'rifa' ? 'ativo' : ''}>🎲 Rifa / Sorteio</button>
           <button onClick={() => setAba('galeria')} className={aba === 'galeria' ? 'ativo' : ''}>Galeria</button>
           <button onClick={() => setAba('transparencia')} className={aba === 'transparencia' ? 'ativo' : ''}>📄 Portal Transparência</button>
-          <button onClick={abrirAdmin} className="btn-admin">
-            {idEditando ? '✏️ Editando Post' : '⚙️ Painel Admin'}
+          <button onClick={abrirAdmin} className={aba === 'admin' ? 'btn-admin ativo' : 'btn-admin'}>
+            {adminAutenticado ? (idEditando ? '✏️ Editando Post' : '⚙️ Painel Admin') : '🔒 Acesso Admin'}
           </button>
         </nav>
       </header>
 
       {/* Conteúdo */}
       <main className="conteudo">
-        {aba === 'admin' && (
+        {aba === 'admin' && adminAutenticado && (
           <section className="painel-admin">
-            <h2>⚙️ Painel de Controle do Sorteio</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2>⚙️ Painel de Controle do Sorteio</h2>
+              <button onClick={sairAdmin} style={{ background: '#6c757d', color: '#fff', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer' }}>
+                🚪 Sair do Admin
+              </button>
+            </div>
 
             <div style={{ background: '#f5f5f5', padding: '20px', borderRadius: '10px', marginBottom: '30px' }}>
               <h3>🎰 Sistema de Sorteio Automático (2 Números Simultâneos)</h3>
@@ -500,7 +520,7 @@ export default function App() {
                       </button>
                     </div>
 
-                    {aba === 'admin' && (
+                    {aba === 'admin' && adminAutenticado && (
                       <div className="acoes-card" style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
                         <button onClick={() => prepararEdicao(post)}>✏️ Editar</button>
                         <button onClick={() => handleDelete(post.id)} className="btn-deletar">🗑️ Excluir</button>
