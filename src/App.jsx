@@ -12,11 +12,11 @@ export default function App() {
   const NUMERO_WHATSAPP = '5531995309939'
   const SENHA_ADMIN = 'Fodasse#1' 
 
-  // Cronômetro
+  // Cronômetro do evento
   const dataEvento = new Date('2026-09-27T09:00:00').getTime()
   const [tempoRestante, setTempoRestante] = useState({ dias: 0, horas: 0, minutos: 0, segundos: 0 })
 
-  // Campos Admin
+  // Campos do formulário Admin
   const [idEditando, setIdEditando] = useState(null)
   const [titulo, setTitulo] = useState('')
   const [conteudo, setConteudo] = useState('')
@@ -26,7 +26,7 @@ export default function App() {
   const [ganhador, setGanhador] = useState('')
   const [carregando, setCarregando] = useState(false)
 
-  // Sistema do Sorteio Automático Duplo
+  // Lista de 1 a 230 participantes para o sorteio
   const [participantes, setParticipantes] = useState(() => {
     const iniciais = {}
     for (let i = 1; i <= 230; i++) iniciais[i] = ''
@@ -59,13 +59,14 @@ export default function App() {
     return () => clearInterval(intervalo)
   }, [])
 
-  // Carrega os dados excluindo qualquer vestígio do portal de transparência
   async function carregarDados() {
     const postsDados = await getPosts()
     const logoSalva = await getLogo()
     
-    // Remove qualquer publicação antiga da categoria 'transparencia' ou 'portaltransparencia'
-    const postsLimpos = (postsDados || []).filter(p => p.categoria !== 'transparencia' && p.categoria !== 'portaltransparencia')
+    // Garante que nenhum post da categoria 'transparencia' apareça
+    const postsLimpos = (postsDados || []).filter(
+      p => p.categoria !== 'transparencia' && p.categoria !== 'portaltransparencia'
+    )
     setPosts(postsLimpos)
     
     if (logoSalva) setLogoUrl(logoSalva)
@@ -109,7 +110,7 @@ export default function App() {
 
   async function handleLike(post) {
     const novosLikes = (post.likes || 0) + 1
-    setPosts(posts.map(p => p.id === post.id ? { ...p, likes: novosLikes } : p))
+    setPosts(posts.map(p => (p.id === post.id ? { ...p, likes: novosLikes } : p)))
     await updatePost(post.id, { likes: novosLikes })
   }
 
@@ -137,7 +138,7 @@ export default function App() {
     alert('Lista de participantes salva com sucesso!')
   }
 
-  // EXECUTA O SORTEIO NO PAINEL ADMIN
+  // ONDE O SORTEIO É OFICIALMENTE EXECUTADO
   async function executarSorteio() {
     const confirmacao = confirm('Deseja iniciar o sorteio oficial de 2 números ao vivo agora?')
     if (!confirmacao) return
@@ -175,7 +176,7 @@ export default function App() {
         const postRifa = posts.find(p => p.categoria === 'rifa')
         const dadosAtualizados = {
           titulo: '🎉 Resultado Oficial do Sorteio Duplo!',
-          conteudo: `Sorteio oficial concluído! Parabéns aos ganhadores!`,
+          conteudo: 'Sorteio oficial concluído! Parabéns aos ganhadores!',
           categoria: 'rifa',
           numero_sorteado: resultadoNumeros,
           ganhador: resultadoGanhadores,
@@ -267,7 +268,7 @@ export default function App() {
         categoria,
         likes: 0,
         ...(novaImagemUrl && { imagem_url: novaImagemUrl }),
-        ...(numeroSorteado && { numero_sorteado: parseInt(numeroSorteado) }),
+        ...(numeroSorteado && { numero_sorteado: parseInt(numeroSorteado, 10) }),
         ...(ganhador && { ganhador })
       }
 
@@ -317,7 +318,7 @@ export default function App() {
     setGanhador('')
   }
 
-  // Filtra publicações excluindo 'transparencia'
+  // Exclui categorias de transparência dos filtros
   const postsFiltrados = posts.filter(p => {
     if (p.categoria === 'transparencia' || p.categoria === 'portaltransparencia') return false
     if (aba === 'inicio' || aba === 'admin') return true
@@ -343,7 +344,7 @@ export default function App() {
       <header className="header">
         <div className="banner-container">
           <img 
-            src={logoUrl || "https://via.placeholder.com/900x250?text=LOGO+DO+CONGRESSO"} 
+            src={logoUrl || 'https://via.placeholder.com/900x250?text=LOGO+DO+CONGRESSO'} 
             alt="Logo do Congresso" 
             className="logo-banner"
           />
@@ -362,13 +363,13 @@ export default function App() {
           </div>
         </div>
 
-        {/* Navegação principal sem a transparência */}
+        {/* Navegação Principal */}
         <nav className="nav">
           <button onClick={() => setAba('inicio')} className={aba === 'inicio' ? 'ativo' : ''}>Início</button>
           <button onClick={() => setAba('rifa')} className={aba === 'rifa' ? 'ativo' : ''}>🎲 Rifa / Sorteio</button>
           <button onClick={() => setAba('galeria')} className={aba === 'galeria' ? 'ativo' : ''}>Galeria</button>
           <button onClick={abrirAdmin} className={aba === 'admin' ? 'btn-admin ativo' : 'btn-admin'}>
-            {adminAutenticado ? (idEditando ? '✏️️ Editando Post' : '⚙️ Painel Admin') : '🔒 Acesso Admin'}
+            {adminAutenticado ? (idEditando ? '✏ Editando Post' : '⚙️ Painel Admin') : '🔒 Acesso Admin'}
           </button>
         </nav>
       </header>
@@ -384,7 +385,7 @@ export default function App() {
               </button>
             </div>
 
-            {/* ONDE REALIZA O SORTEIO */}
+            {/* PAINEL ONDE SE REALIZA O SORTEIO */}
             <div style={{ background: '#eef6ff', padding: '20px', borderRadius: '10px', marginBottom: '30px', border: '2px solid #007bff' }}>
               <h3 style={{ color: '#0056b3', marginTop: 0 }}>🎰 AQUI VOCÊ REALIZA O SORTEIO</h3>
               <p style={{ fontSize: '14px', color: '#555' }}>
