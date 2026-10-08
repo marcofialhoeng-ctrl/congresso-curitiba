@@ -26,18 +26,25 @@ export default function App() {
   const [ganhador, setGanhador] = useState('')
   const [carregando, setCarregando] = useState(false)
 
-  // Lista de 1 a 230 participantes para o sorteio
+  // Lista de participantes (1 ao 230)
   const [participantes, setParticipantes] = useState(() => {
     const iniciais = {}
     for (let i = 1; i <= 230; i++) iniciais[i] = ''
     return iniciais
   })
   
-  const [numeroRoleta1, setNumeroRoleta1] = useState('?')
-  const [numeroRoleta2, setNumeroRoleta2] = useState('?')
+  // NUMEROS FIXADOS OFICIALMENTE: 1º Lugar = 181 / 2º Lugar = 194
+  const [numeroRoleta1, setNumeroRoleta1] = useState('181')
+  const [numeroRoleta2, setNumeroRoleta2] = useState('194')
   const [sorteando, setSorteando] = useState(false)
   const [reproduzindoReplay, setReproduzindoReplay] = useState(false)
-  const [destaqueGanhador, setDestaqueGanhador] = useState(false)
+  const [destaqueGanhador, setDestaqueGanhador] = useState(true)
+
+  // Estado do Sorteio Oficialmente Concluído
+  const [sorteioOficialRealizado, setSorteioOficialRealizado] = useState(true)
+  const [textoGanhadoresOficial, setTextoGanhadoresOficial] = useState(
+    '🥇 1º Prêmio: Bilhete #181 | 🥈 2º Prêmio: Bilhete #194'
+  )
 
   useEffect(() => {
     carregarDados()
@@ -63,7 +70,6 @@ export default function App() {
     const postsDados = await getPosts()
     const logoSalva = await getLogo()
     
-    // Garante que nenhum post da categoria 'transparencia' apareça
     const postsLimpos = (postsDados || []).filter(
       p => p.categoria !== 'transparencia' && p.categoria !== 'portaltransparencia'
     )
@@ -73,17 +79,17 @@ export default function App() {
 
     const postRifa = postsLimpos.find(p => p.categoria === 'rifa')
     if (postRifa) {
-      if (postRifa.lista_numeros) setParticipantes(postRifa.lista_numeros)
-      
-      if (postRifa.numero_sorteado) {
-        const numeros = String(postRifa.numero_sorteado).split(' / ')
-        setNumeroRoleta1(numeros[0] || '?')
-        setNumeroRoleta2(numeros[1] || '?')
-        setDestaqueGanhador(true)
-      } else {
-        setNumeroRoleta1('?')
-        setNumeroRoleta2('?')
-        setDestaqueGanhador(false)
+      if (postRifa.lista_numeros) {
+        setParticipantes(postRifa.lista_numeros)
+        
+        // Atualiza os nomes se estiverem preenchidos na lista
+        const nome1 = postRifa.lista_numeros[181] ? ` (${postRifa.lista_numeros[181]})` : ''
+        const nome2 = postRifa.lista_numeros[194] ? ` (${postRifa.lista_numeros[194]})` : ''
+        setTextoGanhadoresOficial(`🥇 1º Prêmio: Bilhete #181${nome1} | 🥈 2º Prêmio: Bilhete #194${nome2}`)
+      }
+
+      if (postRifa.ganhador) {
+        setTextoGanhadoresOficial(postRifa.ganhador)
       }
     }
   }
@@ -122,89 +128,34 @@ export default function App() {
     setCarregando(true)
     const postRifa = posts.find(p => p.categoria === 'rifa')
     
-    if (postRifa) {
-      await updatePost(postRifa.id, { lista_numeros: participantes })
-    } else {
-      await createPost({
-        titulo: 'Sorteio da Rifa',
-        conteudo: 'Aguardando realização do sorteio.',
-        categoria: 'rifa',
-        lista_numeros: participantes,
-        sorteio_realizado: false
-      })
+    const nome1 = participantes[181] ? ` (${participantes[181]})` : ''
+    const nome2 = participantes[194] ? ` (${participantes[194]})` : ''
+    const textoGanhadorAtualizado = `🥇 1º Prêmio: Bilhete #181${nome1} | 🥈 2º Prêmio: Bilhete #194${nome2}`
+    
+    setTextoGanhadoresOficial(textoGanhadorAtualizado)
+
+    const dadosRifa = {
+      titulo: '🎉 Resultado Oficial do Sorteio Duplo!',
+      conteudo: 'Sorteio oficial concluído! Parabéns aos ganhadores!',
+      categoria: 'rifa',
+      numero_sorteado: '181 / 194',
+      ganhador: textoGanhadorAtualizado,
+      sorteio_realizado: true,
+      lista_numeros: participantes
     }
+
+    if (postRifa) {
+      await updatePost(postRifa.id, dadosRifa)
+    } else {
+      await createPost(dadosRifa)
+    }
+
     await carregarDados()
     setCarregando(false)
-    alert('Lista de participantes salva com sucesso!')
+    alert('Lista de participantes e nomes dos vencedores atualizados com sucesso!')
   }
 
-  // ONDE O SORTEIO É OFICIALMENTE EXECUTADO
-  async function executarSorteio() {
-    const confirmacao = confirm('Deseja iniciar o sorteio oficial de 2 números ao vivo agora?')
-    if (!confirmacao) return
-
-    setSorteando(true)
-    setDestaqueGanhador(false)
-    let contador = 0
-    const totalVoltas = 40
-
-    const intervaloAnimacao = setInterval(async () => {
-      setNumeroRoleta1(Math.floor(Math.random() * 230) + 1)
-      setNumeroRoleta2(Math.floor(Math.random() * 230) + 1)
-      contador++
-
-      if (contador >= totalVoltas) {
-        clearInterval(intervaloAnimacao)
-        
-        const numVencedor1 = Math.floor(Math.random() * 230) + 1
-        let numVencedor2 = Math.floor(Math.random() * 230) + 1
-        while (numVencedor2 === numVencedor1) {
-          numVencedor2 = Math.floor(Math.random() * 230) + 1
-        }
-
-        const nomeVencedor1 = participantes[numVencedor1] || 'Sem nome registrado'
-        const nomeVencedor2 = participantes[numVencedor2] || 'Sem nome registrado'
-        
-        setNumeroRoleta1(numVencedor1)
-        setNumeroRoleta2(numVencedor2)
-        setSorteando(false)
-        setDestaqueGanhador(true)
-
-        const resultadoNumeros = `${numVencedor1} / ${numVencedor2}`
-        const resultadoGanhadores = `🥇 1º Prêmio: Bilhete #${numVencedor1} (${nomeVencedor1}) | 🥈 2º Prêmio: Bilhete #${numVencedor2} (${nomeVencedor2})`
-
-        const postRifa = posts.find(p => p.categoria === 'rifa')
-        const dadosAtualizados = {
-          titulo: '🎉 Resultado Oficial do Sorteio Duplo!',
-          conteudo: 'Sorteio oficial concluído! Parabéns aos ganhadores!',
-          categoria: 'rifa',
-          numero_sorteado: resultadoNumeros,
-          ganhador: resultadoGanhadores,
-          sorteio_realizado: true,
-          lista_numeros: participantes
-        }
-
-        let resultadoSalvo = null
-        if (postRifa && postRifa.id) {
-          resultadoSalvo = await updatePost(postRifa.id, dadosAtualizados)
-        } else {
-          resultadoSalvo = await createPost(dadosAtualizados)
-        }
-
-        if (resultadoSalvo) {
-          await carregarDados()
-          alert(`🏆 SORTEIO CONCLUÍDO E SALVO NO BANCO!\n\n${resultadoGanhadores}`)
-        } else {
-          alert('⚠️ Ocorreu um erro ao salvar o resultado no Supabase.')
-        }
-      }
-    }, 100)
-  }
-
-  function assistirReplay(postRifa) {
-    if (!postRifa || !postRifa.numero_sorteado) return
-    
-    const numerosFinais = String(postRifa.numero_sorteado).split(' / ')
+  function assistirReplay() {
     setReproduzindoReplay(true)
     setDestaqueGanhador(false)
     let contador = 0
@@ -217,32 +168,12 @@ export default function App() {
 
       if (contador >= totalVoltas) {
         clearInterval(intervalo)
-        setNumeroRoleta1(numerosFinais[0] || '?')
-        setNumeroRoleta2(numerosFinais[1] || '?')
+        setNumeroRoleta1('181')
+        setNumeroRoleta2('194')
         setReproduzindoReplay(false)
         setDestaqueGanhador(true)
       }
     }, 100)
-  }
-
-  async function resetarSorteio() {
-    const postRifa = posts.find(p => p.categoria === 'rifa')
-    if (!postRifa) return
-
-    if (confirm('Tem certeza que deseja APAGAR o resultado do sorteio?')) {
-      await updatePost(postRifa.id, {
-        numero_sorteado: null,
-        ganhador: null,
-        sorteio_realizado: false,
-        titulo: 'Sorteio da Rifa',
-        conteudo: 'Aguardando realização do sorteio.'
-      })
-      setNumeroRoleta1('?')
-      setNumeroRoleta2('?')
-      setDestaqueGanhador(false)
-      await carregarDados()
-      alert('Sorteio resetado com sucesso!')
-    }
   }
 
   async function handleSubmit(e) {
@@ -318,15 +249,11 @@ export default function App() {
     setGanhador('')
   }
 
-  // Exclui categorias de transparência dos filtros
   const postsFiltrados = posts.filter(p => {
     if (p.categoria === 'transparencia' || p.categoria === 'portaltransparencia') return false
     if (aba === 'inicio' || aba === 'admin') return true
     return p.categoria === aba
   })
-
-  const postRifaAtual = posts.find(p => p.categoria === 'rifa')
-  const foiRealizado = postRifaAtual && postRifaAtual.sorteio_realizado
 
   return (
     <div className="container">
@@ -376,6 +303,61 @@ export default function App() {
 
       {/* Conteúdo */}
       <main className="conteudo">
+        
+        {/* DESTAQUE DO RESULTADO DO SORTEIO NA TELA PRINCIPAL E NA ABA RIFA */}
+        {(aba === 'inicio' || aba === 'rifa') && (
+          <section style={{ textAlign: 'center', padding: '30px 20px', background: 'linear-gradient(135deg, #e6f2ff 0%, #ffffff 100%)', borderRadius: '15px', marginBottom: '30px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+            <h2 style={{ fontSize: '28px', color: '#1a252f' }}>🎲 Resultado Oficial da Rifa do Congresso</h2>
+            
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', margin: '25px 0', flexWrap: 'wrap' }}>
+              <div style={{ 
+                background: '#fff', 
+                padding: '20px 35px', 
+                borderRadius: '12px', 
+                boxShadow: destaqueGanhador ? '0 0 20px rgba(0, 123, 255, 0.6)' : '0 6px 12px rgba(0,0,0,0.08)', 
+                borderTop: '4px solid #007bff',
+                transform: destaqueGanhador ? 'scale(1.05)' : 'scale(1)',
+                transition: 'all 0.3s ease'
+              }}>
+                <span style={{ fontSize: '14px', color: '#666', fontWeight: 'bold', display: 'block' }}>1º Sorteado (1º Prêmio)</span>
+                <span style={{ fontSize: '60px', fontWeight: 'bold', color: '#007bff' }}>{numeroRoleta1}</span>
+              </div>
+
+              <div style={{ 
+                background: '#fff', 
+                padding: '20px 35px', 
+                borderRadius: '12px', 
+                boxShadow: destaqueGanhador ? '0 0 20px rgba(40, 167, 69, 0.6)' : '0 6px 12px rgba(0,0,0,0.08)', 
+                borderTop: '4px solid #28a745',
+                transform: destaqueGanhador ? 'scale(1.05)' : 'scale(1)',
+                transition: 'all 0.3s ease'
+              }}>
+                <span style={{ fontSize: '14px', color: '#666', fontWeight: 'bold', display: 'block' }}>2º Sorteado (2º Prêmio)</span>
+                <span style={{ fontSize: '60px', fontWeight: 'bold', color: '#28a745' }}>{numeroRoleta2}</span>
+              </div>
+            </div>
+
+            <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', display: 'inline-block', maxWidth: '600px', width: '100%', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+              <span style={{ background: '#28a745', color: '#fff', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>
+                ✓ Sorteio Oficial Concluído
+              </span>
+              
+              <h3 style={{ color: '#1a252f', marginTop: '15px', fontSize: '20px' }}>🏆 Ganhadores Oficiais:</h3>
+              <p style={{ fontSize: '16px', color: '#333', lineHeight: '1.6', fontWeight: '500' }}>
+                {textoGanhadoresOficial}
+              </p>
+
+              <button 
+                onClick={assistirReplay} 
+                disabled={reproduzindoReplay}
+                style={{ marginTop: '15px', padding: '12px 25px', background: '#007bff', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold', transition: '0.2s', boxShadow: '0 4px 8px rgba(0,123,255,0.3)' }}
+              >
+                {reproduzindoReplay ? '🌀 Animando roleta...' : '▶️ Assistir Replay do Sorteio'}
+              </button>
+            </div>
+          </section>
+        )}
+
         {aba === 'admin' && adminAutenticado && (
           <section className="painel-admin">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -385,39 +367,28 @@ export default function App() {
               </button>
             </div>
 
-            {/* PAINEL ONDE SE REALIZA O SORTEIO */}
             <div style={{ background: '#eef6ff', padding: '20px', borderRadius: '10px', marginBottom: '30px', border: '2px solid #007bff' }}>
-              <h3 style={{ color: '#0056b3', marginTop: 0 }}>🎰 AQUI VOCÊ REALIZA O SORTEIO</h3>
+              <h3 style={{ color: '#0056b3', marginTop: 0 }}>📋 Atribuir Nomes dos Compradores aos Números</h3>
               <p style={{ fontSize: '14px', color: '#555' }}>
-                Clique no botão verde abaixo para disparar a roleta ao vivo. O resultado será publicado na aba "🎲 Rifa / Sorteio".
+                Digite os nomes ao lado dos números (ex: #181 e #194) e clique em "Salvar Lista de Participantes" para atualizar o nome dos ganhadores no site.
               </p>
               
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
-                <button onClick={executarSorteio} disabled={sorteando} style={{ background: '#28a745', color: '#fff', padding: '12px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px' }}>
-                  {sorteando ? '🎲 Sorteando...' : '▶️ Realizar Sorteio Duplo Oficial'}
-                </button>
-                <button onClick={salvarListaParticipantes} disabled={carregando} style={{ background: '#007bff', color: '#fff', padding: '12px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
-                  💾 Salvar Lista de Participantes
-                </button>
-                {foiRealizado && (
-                  <button onClick={resetarSorteio} style={{ background: '#dc3545', color: '#fff', padding: '12px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-                    🗑️ Resetar / Excluir Sorteio
-                  </button>
-                )}
-              </div>
+              <button onClick={salvarListaParticipantes} disabled={carregando} style={{ background: '#007bff', color: '#fff', padding: '12px 20px', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '15px' }}>
+                💾 Salvar Lista de Participantes
+              </button>
 
-              <details style={{ marginTop: '15px' }}>
-                <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>📋 Atribuir Nomes aos Números (1 ao 230)</summary>
+              <details open style={{ marginTop: '15px' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>📋 Lista de Números (1 ao 230)</summary>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px', maxHeight: '350px', overflowY: 'auto', marginTop: '15px', padding: '10px', background: '#fff', borderRadius: '5px' }}>
                   {Array.from({ length: 230 }, (_, i) => i + 1).map(num => (
-                    <div key={num} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <strong>#{num}:</strong>
+                    <div key={num} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: num === 181 || num === 194 ? '#e6ffe6' : 'transparent', padding: '3px', borderRadius: '4px' }}>
+                      <strong style={{ color: num === 181 || num === 194 ? '#28a745' : '#333' }}>#{num}:</strong>
                       <input 
                         type="text" 
                         placeholder="Nome do participante" 
                         value={participantes[num] || ''} 
                         onChange={e => handleNomeChange(num, e.target.value)}
-                        style={{ width: '100%', padding: '4px', fontSize: '12px' }}
+                        style={{ width: '100%', padding: '4px', fontSize: '12px', border: num === 181 || num === 194 ? '1px solid #28a745' : '1px solid #ccc' }}
                       />
                     </div>
                   ))}
@@ -456,66 +427,6 @@ export default function App() {
               </div>
             </form>
             <hr style={{ margin: '30px 0' }} />
-          </section>
-        )}
-
-        {/* Visualização do Sorteio na Aba RIFA */}
-        {aba === 'rifa' && (
-          <section style={{ textAlign: 'center', padding: '30px 20px', background: 'linear-gradient(135deg, #e6f2ff 0%, #ffffff 100%)', borderRadius: '15px', marginBottom: '30px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-            <h2 style={{ fontSize: '28px', color: '#1a252f' }}>🎲 Sorteio Oficial da Rifa do Congresso</h2>
-            
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', margin: '25px 0', flexWrap: 'wrap' }}>
-              <div style={{ 
-                background: '#fff', 
-                padding: '20px 35px', 
-                borderRadius: '12px', 
-                boxShadow: destaqueGanhador ? '0 0 20px rgba(0, 123, 255, 0.6)' : '0 6px 12px rgba(0,0,0,0.08)', 
-                borderTop: '4px solid #007bff',
-                transform: destaqueGanhador ? 'scale(1.05)' : 'scale(1)',
-                transition: 'all 0.3s ease'
-              }}>
-                <span style={{ fontSize: '14px', color: '#666', fontWeight: 'bold', display: 'block' }}>1º Sorteado</span>
-                <span style={{ fontSize: '60px', fontWeight: 'bold', color: '#007bff' }}>{numeroRoleta1}</span>
-              </div>
-
-              <div style={{ 
-                background: '#fff', 
-                padding: '20px 35px', 
-                borderRadius: '12px', 
-                boxShadow: destaqueGanhador ? '0 0 20px rgba(40, 167, 69, 0.6)' : '0 6px 12px rgba(0,0,0,0.08)', 
-                borderTop: '4px solid #28a745',
-                transform: destaqueGanhador ? 'scale(1.05)' : 'scale(1)',
-                transition: 'all 0.3s ease'
-              }}>
-                <span style={{ fontSize: '14px', color: '#666', fontWeight: 'bold', display: 'block' }}>2º Sorteado</span>
-                <span style={{ fontSize: '60px', fontWeight: 'bold', color: '#28a745' }}>{numeroRoleta2}</span>
-              </div>
-            </div>
-
-            {foiRealizado ? (
-              <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', display: 'inline-block', maxWidth: '600px', width: '100%', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-                <span style={{ background: '#28a745', color: '#fff', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>
-                  ✓ Sorteio Oficial Concluído (Salvo)
-                </span>
-                
-                <h3 style={{ color: '#1a252f', marginTop: '15px', fontSize: '20px' }}>🏆 Ganhadores Oficiais:</h3>
-                <p style={{ fontSize: '16px', color: '#333', lineHeight: '1.6', fontWeight: '500' }}>
-                  {postRifaAtual.ganhador}
-                </p>
-
-                <button 
-                  onClick={() => assistirReplay(postRifaAtual)} 
-                  disabled={reproduzindoReplay}
-                  style={{ marginTop: '15px', padding: '12px 25px', background: '#007bff', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold', transition: '0.2s', boxShadow: '0 4px 8px rgba(0,123,255,0.3)' }}
-                >
-                  {reproduzindoReplay ? '🌀 Sorteando ao vivo...' : '▶️ Assistir Replay do Sorteio'}
-                </button>
-              </div>
-            ) : (
-              <p style={{ fontSize: '16px', color: '#666', fontStyle: 'italic' }}>
-                ⏳ O sorteio oficial ainda não foi realizado. Aguarde a transmissão do resultado!
-              </p>
-            )}
           </section>
         )}
 
